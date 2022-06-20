@@ -1,7 +1,7 @@
 chord.txt
-myfile.txt
-a.mscx
+*.mscz
+*.mscx
 .mscbackup/
-a/
-a.mscz
-venv
+venv/
+tmp/
+.DS_Store
