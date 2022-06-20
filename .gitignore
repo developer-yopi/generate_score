@@ -5,3 +5,4 @@ chord.txt
 venv/
 tmp/
 .DS_Store
+*.ipynb

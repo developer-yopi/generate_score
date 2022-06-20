@@ -131,6 +131,22 @@ def get_tpc(note: str='C'):
     df = pd.read_csv('csv/tpc.csv', index_col='tpc')
     tpc = int(df[df['pitch'] == note].index[0])
     return tpc
+    if note == 'F' or note == 'f':
+        return 13
+    if note == 'C' or note == 'c':
+        return 14
+    if note == 'G' or note == 'g':
+        return 15
+    if note == 'D' or note == 'd':
+        return 16
+    if note == 'A' or note == 'a':
+        return 17
+    if note == 'E' or note == 'e':
+        return 18
+    if note == 'B' or note == 'b':
+        return 19
+    else:
+        return 14
 
 # コードを根音、種類、基音に分ける
 def separate_chord(chord: str='Cmaj7'):
