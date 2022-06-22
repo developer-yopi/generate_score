@@ -14,10 +14,17 @@ def main(url: str="https://gakufu.gakki.me/m/index2.php?p=RQ10738&k=m1#rp"):
     res = requests.get(url)
     soup = BeautifulSoup(res.text, 'html.parser')
     tag_obj = soup.find_all('span', class_='cd_fontpos')
-    chord_list = [x.text.replace('â\x99\xad', 'b').replace('ï¼\x83', '#').replace('on', '/') for x in tag_obj]
+    chord_list = [
+        chord.text
+        .replace('â\x99\xad', 'b')  # ♭ を b に置き換える
+        .replace('ï¼\x83', '#')     # ＃ を # に置き換える
+        .replace('on', '/')         # on を / に置き換える
+        for chord in tag_obj
+    ]
     # chord.txtに出力
     with open('chord.txt', 'w') as f:
-        print(chord_list, file=f)
+        chords = [chord + '\n' for chord in chord_list]
+        f.writelines(chords)
 
     # ファイル名を取得
     file_list = os.listdir()
@@ -25,7 +32,7 @@ def main(url: str="https://gakufu.gakki.me/m/index2.php?p=RQ10738&k=m1#rp"):
         if file.endswith('.mscz'):
             mscz = file
             break
-
+    
     title = mscz.replace('.mscz', '')
     tmp_dir = './tmp/'
     subprocess.run(['mkdir', tmp_dir])
@@ -52,7 +59,10 @@ def main(url: str="https://gakufu.gakki.me/m/index2.php?p=RQ10738&k=m1#rp"):
                 elif i == 4:  # Bassを入力
                     # 休符を消し音符を入力
                     voice.remove(rest)
-                    voice.append(new_chord(pitch=42, tpc=root))
+                    if base:
+                        voice.append(new_chord(pitch=42, tpc=base))
+                    else:
+                        voice.append(new_chord(pitch=42, tpc=root))
 
     # ファイル出力
     tree.write(
@@ -110,7 +120,7 @@ def new_harmony(root: int, name: str, base: int):
     return harmony_elem
 
 # 音名から Tonal Pitch Class を取得する
-def tpc(note: str) -> int:
+def tpc(note: str):
     df = pd.read_csv('csv/tpc.csv', index_col='tpc')
     tpc = int(df[df['pitch'] == note].index[0])
     return tpc
