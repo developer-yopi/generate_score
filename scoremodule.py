@@ -102,6 +102,7 @@ def separate_chord(chord: str):
     return root, name, base
 
 
+# ピッチをTPCに変換
 def pitch_to_tpc(pitch: int):
     if pitch % 2 == 1:
         tpc =  pitch % 12 + 8
@@ -109,7 +110,7 @@ def pitch_to_tpc(pitch: int):
         tpc =  pitch % 12 + 14
     return tpc
 
-
+# TPCをピッチに変換
 def tpc_to_pitch(tpc: int, min: int):
     if tpc % 2 == 1:
         pitch = tpc + 16
@@ -119,15 +120,19 @@ def tpc_to_pitch(tpc: int, min: int):
         pitch += 12
     return pitch
 
-
 # 根音とインターバルから、ピッチとTPCの配列を取得する関数
-def pitches_and_tpcs(root, intervals):
+def pitches_and_tpcs(root, intervals, min=59):
     pitches = [0 for i in range(len(intervals))]
     tpcs = [0 for i in range(len(intervals))]
-    root_pitch = tpc_to_pitch(root, 48)
+    root_pitch = tpc_to_pitch(root, 100)
 
     for i in range(len(pitches)):
         pitches[i] = intervals[i] + root_pitch
+
+    while pitches[2] - 12 >= min:
+        top = pitches.pop()
+        third = top - 12
+        pitches.insert(0, third)
 
     for i in range(len(tpcs)):
         tpcs[i] = pitch_to_tpc(pitches[i])
