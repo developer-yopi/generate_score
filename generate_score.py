@@ -48,9 +48,9 @@ def main():
                     # 休符を消し音符を入力
                     voice.remove(rest)
                     if base:
-                        voice.append(sm.new_chord(pitch=sm.tpc_to_pitch(base, BASE_MIN), tpc=base))
+                        voice.append(sm.new_chord(length=1, pitch=sm.tpc_to_pitch(base, BASE_MIN), tpc=base))
                     else:
-                        voice.append(sm.new_chord(pitch=sm.tpc_to_pitch(root, BASE_MIN), tpc=root))
+                        voice.append(sm.new_chord(length=1, pitch=sm.tpc_to_pitch(root, BASE_MIN), tpc=root))
 
     # ファイル出力
     tree.write(

@@ -1,5 +1,3 @@
-import os
-import subprocess
 import glob
 
 from lxml import etree
@@ -22,13 +20,14 @@ def main():
     path = './score/'
     mscx = glob.glob(path + 'a.mscx')[0]
     
+    # mscxを解析
     tree = etree.parse(mscx)
     staffs = tree.xpath('//Staff')
     for i, staff in enumerate(staffs[len(staffs)//2:]):  # パート
         for j, voice in enumerate(staff.xpath('./Measure/voice')):  # 小節
             for harmony in voice.xpath('./Harmony'):
                 sm.no_play(harmony)  # コードの再生をオフにする
-            for k, rest in enumerate(voice.xpath('./Rest')):  # 休符
+            for rest in voice.xpath('./Rest'):  # 休符
                 root, name, base = sm.separate_chord(chord_list[j])
                 if not name:
                     name = 'M'  # メジャーコードを識別できるようにする
@@ -38,7 +37,7 @@ def main():
                 if 1 <= i <= 3:
                     # 休符を消し音符を入力
                     voice.remove(rest)
-                    voice.append(sm.new_chord(pitch=pitches[3-i], tpc=tpcs[3-i]))
+                    voice.append(sm.new_chord(length=1, pitch=pitches[3-i], tpc=tpcs[3-i]))
 
     # ファイル出力
     tree.write(

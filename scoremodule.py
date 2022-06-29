@@ -1,36 +1,65 @@
-import subprocess
-import os
-from zipfile import ZipFile
+import math
+from fractions import Fraction
 
-import requests
-from bs4 import BeautifulSoup
 from lxml import etree
 import pandas as pd
+
+
+THIRD_MIN = 59
 
 
 ### xmlの操作に関する関数
 
 # 新しいchord要素
-def new_chord(pitch: int, tpc: int):
+def new_chord(length: float, pitch: int, tpc: int):
     # chord要素の準備
     chord_elem = etree.Element('Chord')
+    dots_elem = etree.Element('dots')
     duration_type_elem = etree.Element('durationType')
     note_elem = etree.Element('Note')
     pitch_elem = etree.Element('pitch')
     tpc_elem = etree.Element('tpc')
 
     # 要素に内容を書き込む
-    duration_type_elem.text = 'whole'   # 全音符
+    duration, dots = length_to_duration_and_dots(length)
+    duration_type = duration_to_duration_type(duration)
+    dots_elem.text = str(dots)
+    duration_type_elem.text = duration_type
     pitch_elem.text = str(pitch)
     tpc_elem.text = str(tpc)
 
     # 親子関係の構築
+    if dots:
+        chord_elem.append(dots_elem)
     chord_elem.append(duration_type_elem)
     chord_elem.append(note_elem)
     note_elem.append(pitch_elem)
     note_elem.append(tpc_elem)
 
     return chord_elem
+
+
+# 新しいrest要素
+def new_rest(length: float):
+    # rest要素の準備
+    rest_elem = etree.Element('Rest')
+    dots_elem = etree.Element('dots')
+    duration_type_elem = etree.Element('durationType')
+    note_elem = etree.Element('Note')
+
+    # 要素に内容を書き込む
+    duration, dots = length_to_duration_and_dots(length)
+    duration_type = duration_to_duration_type(duration)
+    dots_elem.text = str(dots)
+    duration_type_elem.text = duration_type
+
+    # 親子関係の構築
+    if dots:
+        rest_elem.append(dots_elem)
+    rest_elem.append(duration_type_elem)
+    rest_elem.append(note_elem)
+
+    return rest_elem
 
 
 # 新しいharmony要素
@@ -56,7 +85,7 @@ def new_harmony(root: int, name: str, base: int):
     return harmony_elem
 
 
-# コードの再生を止める関数
+# コードの再生をオフにする関数
 def no_play(harmony_elem):
     if harmony_elem.xpath('./play'):
         harmony_elem.remove(harmony_elem.xpath('./play')[0])
@@ -64,7 +93,6 @@ def no_play(harmony_elem):
     play_elem.text = '0'
     harmony_elem.append(play_elem)
     return
-
 
 
 ### tpcなどの操作
@@ -105,9 +133,13 @@ def separate_chord(chord: str):
 # ピッチをTPCに変換
 def pitch_to_tpc(pitch: int):
     if pitch % 2 == 1:
-        tpc =  pitch % 12 + 8
+        tpc = pitch % 12 + 8
     else:
-        tpc =  pitch % 12 + 14
+        tpc = pitch % 12 + 14
+    if tpc < 10:
+        tpc += 12
+    elif tpc > 21:
+        tpc -= 12
     return tpc
 
 # TPCをピッチに変換
@@ -121,20 +153,81 @@ def tpc_to_pitch(tpc: int, min: int):
     return pitch
 
 # 根音とインターバルから、ピッチとTPCの配列を取得する関数
-def pitches_and_tpcs(root, intervals, min=59):
-    pitches = [0 for i in range(len(intervals))]
-    tpcs = [0 for i in range(len(intervals))]
+def pitches_and_tpcs(root, intervals, min=THIRD_MIN):
     root_pitch = tpc_to_pitch(root, 100)
 
-    for i in range(len(pitches)):
-        pitches[i] = intervals[i] + root_pitch
+    pitches = [root_pitch + intervals[i] for i in range(3)]
 
     while pitches[2] - 12 >= min:
         top = pitches.pop()
         third = top - 12
         pitches.insert(0, third)
 
-    for i in range(len(tpcs)):
-        tpcs[i] = pitch_to_tpc(pitches[i])
+    tpcs = [pitch_to_tpc(pitches[i]+12) for i in range(3)]
 
     return pitches, tpcs
+
+# chordを取得する関数
+def get_chord(voice):
+    chord_list = []
+    position = 0
+    for element in voice.xpath('./*'):
+        if element.tag == 'Harmony':
+            root = int(element.xpath('./root')[0].text)
+            try:
+                name = element.xpath('./name')[0].text
+            except IndexError:
+                name = None
+            try:
+                base = int(element.xpath('./base')[0].text)
+            except IndexError:
+                base = None
+            chord_list.append([position, root, name, base])
+        elif element.tag == 'Rest' or element.tag == 'Chord':
+            duration_type = element.xpath('./durationType')[0].text
+            duration = duration_type_to_duration(duration_type)
+            if element.xpath('dots'):
+                duration *= (2 - (1/2)**int(element.xpath('dots')[0].text))
+            position += duration
+        elif element.tag == 'location':
+            position += float(Fraction(element.xpath('fractions')[0].text))
+    return chord_list
+
+def duration_type_to_duration(duration_type: str):
+    if duration_type == 'measure' or duration_type == 'whole':
+        return 1
+    elif duration_type == 'half':
+        return 1/2
+    elif duration_type == 'quarter':
+        return 1/4
+    elif duration_type == 'eighth':
+        return 1/8
+    elif duration_type == '16th':
+        return 1/16
+    elif duration_type == '32nd':
+        return 1/32
+    elif duration_type == '64th':
+        return 1/64
+
+def duration_to_duration_type(duration: float):
+    if duration == 1:
+        return 'whole'
+    elif duration == 1/2:
+        return 'half'
+    elif duration == 1/4:
+        return 'quarter'
+    elif duration == 1/8:
+        return 'eighth'
+    elif duration == 1/16:
+        return '16th'
+    elif duration == 1/32:
+        return '32nd'
+    elif duration == 1/64:
+        return '64th'
+
+def length_to_duration_and_dots(length: float):
+    duration = 1.0
+    while length < duration:
+        duration /= 2.0
+    dots = int(math.log(2.0-length/duration, 1/2))
+    return duration, dots

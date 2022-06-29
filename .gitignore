@@ -3,8 +3,8 @@ chord.txt
 *.mscx
 .mscbackup/
 venv/
-tmp/
 .DS_Store
 *.ipynb
 .ipynb_checkpoints/
+score/
 __pycache__
