@@ -20,10 +20,10 @@ def main():
     
     # mscxを解析
     tree = etree.parse(mscx)
-    staffs = tree.xpath('//Staff')
-    chord_list = []
 
     # リードの段のコードを取得
+    chord_list = []
+    staffs = tree.xpath('//Staff')
     lead_staff = staffs[len(staffs)//2]
     for voice in lead_staff.xpath('./Measure/voice'):  # 小節
         chord_list.append(sm.get_chord(voice))
@@ -51,14 +51,12 @@ def main():
                 root, name, base = chord[1:]
                 if not name:
                     name = 'M'  # メジャーコードを識別できるようにする
+                if not base:
+                    base = root  # 基音が存在しない場合、基音は根音とする
                 # ベースの音符入力
                 if i == 3:
-                    if base:
-                        pitch = sm.tpc_to_pitch(base, BASE_MIN)
-                        voice.append(sm.new_chord(length, pitch, base))
-                    else:
-                        pitch = sm.tpc_to_pitch(root, BASE_MIN)
-                        voice.append(sm.new_chord(length, pitch, root))
+                    pitch = sm.tpc_to_pitch(base, BASE_MIN)
+                    voice.append(sm.new_chord(length, pitch, base))
                 # コーラスの音符入力
                 else:
                     intervals = df_chord.loc[name]  # コード名に対応した和音の構成音のリストを取得
